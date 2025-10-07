@@ -49,6 +49,7 @@
 
 <h1>AQI Data Visualization</h1>
 <h2>Controls</h2>
+<p>Select a dataset and toggle raw data view:</p>
 <label>
   Dataset:
 	<select on:change={(e) => selectedDataset.set((e.target as HTMLSelectElement).value as keyof typeof datasets)}>
