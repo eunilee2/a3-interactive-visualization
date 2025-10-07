@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AQIChart from '$lib/AQIChart.svelte';
+	import AQITimeSeries from '$lib/AQITimeSeries.svelte';
 	import * as d3 from 'd3';
 	import { writable, derived} from 'svelte/store';
 
@@ -58,6 +59,7 @@
 	<p>loading data...</p>
 {:then data}
 	<AQIChart {data} />
+	<AQITimeSeries {data} />
 {:catch error}
 	<p>Something went wrong: {error.message}</p>
 {/await}
