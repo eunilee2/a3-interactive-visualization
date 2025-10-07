@@ -38,6 +38,7 @@
 	}
 
 	let dataPromise: Promise<any[]> = d3.csv(datasets['avalon'], parseRow);
+	let showRaw: boolean = false;
 
 	$: if ($selectedDataset) {
 	  // re-run fetch whenever selectedDataset changes
@@ -55,11 +56,16 @@
 	</select>
 </label>
 
+<label>
+    Show Raw Data
+    <input type="checkbox" bind:checked={showRaw} />
+</label>
+
 {#await dataPromise}
 	<p>loading data...</p>
 {:then data}
 	<AQIChart {data} />
-	<AQITimeSeries {data} />
+	<AQITimeSeries {data} {showRaw} />
 {:catch error}
 	<p>Something went wrong: {error.message}</p>
 {/await}
@@ -67,5 +73,8 @@
 <style>
 	* {
 		font-family: sans-serif;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
 	}
 </style>

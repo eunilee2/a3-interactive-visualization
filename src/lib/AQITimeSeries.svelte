@@ -3,7 +3,10 @@
 	import * as d3 from 'd3';
 
 	// Expect aggregated monthly data: { date: Date, avg: number, p10: number, p90: number, count?: number }
+	// If passing raw rows, they should have `timestamp` and `usAqi`/`pm25` fields.
 	export let data: any[] = [];
+	// showRaw: whether to render raw datapoints (only applicable if `data` is raw rows)
+	export let showRaw: boolean = false;
 
 	let container: HTMLDivElement;
 	let ro: ResizeObserver | null = null;
@@ -44,16 +47,18 @@
 
 		// if rows look like raw data (have timestamp/usAqi), aggregate to monthly buckets here
 		let series: any[] = [];
+		// keep original raw rows (if present) to optionally render points
+		let rawRows: any[] | null = null;
 		if (data && data.length > 0 && (data[0].timestamp || data[0].usAqi)) {
 			// treat as raw rows
-			const rows = data
+			rawRows = data
 				.map((d: any) => ({
 					timestamp: d.timestamp ? new Date(d.timestamp) : null,
 					value: d.usAqi != null ? +d.usAqi : (d['US AQI'] != null ? +d['US AQI'] : (d.pm25 != null ? +d.pm25 : NaN))
 				}))
 				.filter((r: any) => r.timestamp && !isNaN(r.value));
 
-			const grouped = d3.group(rows, (r: any) => alignTo15(r.timestamp).getTime());
+			const grouped = d3.group(rawRows, (r: any) => alignTo15(r.timestamp).getTime());
 
 			series = Array.from(grouped, ([k, vals]) => {
 				const values = vals.map((v: any) => v.value).sort(d3.ascending);
@@ -175,7 +180,7 @@
 			.attr('class', 'band')
 			.attr('d', area as any)
 			.attr('fill', '#aeaeae')
-			.attr('opacity', 0.7);
+			.attr('opacity', 0.5);
 
 		// avg line
 		const line = d3.line()
@@ -191,6 +196,50 @@
 			.attr('stroke', '#1f77b4')
 			.attr('stroke-width', 2);
 
+		// raw points (if available and enabled)
+		if (showRaw && rawRows && rawRows.length > 0) {
+			console.log('AQITimeSeries: showRaw=', showRaw, 'rawRows=', rawRows.length);
+			// create a tooltip container
+			// cast selection to any to avoid TS selection type mismatch
+			let tooltip: any = (d3.select(container).select('.raw-tooltip') as any);
+			if (!tooltip || tooltip.empty()) {
+				tooltip = (d3.select(container) as any)
+					.append('div')
+					.attr('class', 'raw-tooltip')
+					.style('position', 'absolute')
+					.style('pointer-events', 'none')
+					.style('background', 'rgba(0,0,0,0.7)')
+					.style('color', '#fff')
+					.style('padding', '4px 6px')
+					.style('border-radius', '3px')
+					.style('font-size', '12px')
+					.style('display', 'none');
+			}
+
+			const pts = g.append('g').attr('class', 'raw-points');
+			pts.selectAll('circle')
+				.data(rawRows)
+				.join('circle')
+				.attr('cx', (d: any) => x(d.timestamp))
+				.attr('cy', (d: any) => y(d.value))
+				.attr('r', 3.5)
+				.attr('fill', '#222')
+				.attr('opacity', 0.6)
+				.on('mouseover', function (event: any, d: any) {
+					tooltip.style('display', 'block').text(`${d.timestamp.toISOString().slice(0, 16).replace('T',' ')} — ${d.value}`);
+				})
+				.on('mousemove', function (event: any) {
+					// position tooltip relative to container using client coordinates
+					const rect = container.getBoundingClientRect();
+					const left = event.clientX - rect.left + 12;
+					const top = event.clientY - rect.top + 12;
+					tooltip.style('left', left + 'px').style('top', top + 'px');
+				})
+				.on('mouseout', function () {
+					tooltip.style('display', 'none');
+				});
+		}
+
 		// legend (top-right)
 		const legend = svg.append('g').attr('transform', `translate(${width - margin.right + 10},${margin.top})`);
 		let legendY = 0;
@@ -204,7 +253,7 @@
 
 		// spacer
 		legendY += 6;
-		legend.append('rect').attr('x', 0).attr('y', legendY).attr('width', 12).attr('height', 12).attr('fill', '#aeaeae').attr('opacity', 0.7);
+		legend.append('rect').attr('x', 0).attr('y', legendY).attr('width', 12).attr('height', 12).attr('fill', '#aeaeae').attr('opacity', 0.5);
 		legend.append('text').attr('x', 18).attr('y', legendY + 10).text('10%-90% band').attr('font-size', 12).attr('alignment-baseline', 'middle');
 		legendY += 18;
 		legend.append('line').attr('x1', 0).attr('y1', legendY + 6).attr('x2', 12).attr('y2', legendY + 6).attr('stroke', '#1f77b4').attr('stroke-width', 2);
@@ -220,12 +269,20 @@
 	onDestroy(() => {
 		if (ro && container) ro.disconnect();
 	});
+
+// re-draw when inputs change (data or showRaw). This makes the checkbox reactive.
+$: if (container) {
+    // depend on data and showRaw so Svelte will run this when they change
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    data, showRaw; 
+    draw();
+}
 </script>
 
 <div bind:this={container} class="aqi-timeseries" style="width:100%; position:relative"></div>
 
 <style>
-	:global(.band) { fill: #aeaeae; opacity: 0.7; }
+	:global(.band) { fill: #aeaeae; opacity: 0.5; }
 	:global(.line) { stroke: rgb(0, 20, 36); fill: none; stroke-width: 1.5px; }
 	/* keep global styles minimal to avoid "unused selector" warnings */
 	:global(svg) { font-family: sans-serif; }
