@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AQIChart from '$lib/AQIChart.svelte';
 	import * as d3 from 'd3';
+	import { writable, derived} from 'svelte/store';
 
 	const datasets = {
 		avalon: 'https://dig.cmu.edu/datavis-fall-2025/assignments/data/%5BAvalon%5D_daily-avg.csv',
@@ -20,31 +21,44 @@
 			'https://dig.cmu.edu/datavis-fall-2025/assignments/data/%5BUSA-Pennsylvania-Pittsburgh%5D_daily-avg.csv'
 	};
 
-	const selectedDataset: keyof typeof datasets = $state('avalon');
+	const selectedDataset = writable<keyof typeof datasets>('avalon');
 
-	const data = $derived.by(() =>
-		d3.csv(datasets[selectedDataset], (d: any) => ({
-			city: d.City,
-			country: d.Country,
-			mainPollutant: d['Main pollutant'],
-			pm25: +d['PM2.5'],
-			state: d.State,
-			stationName: d['Station name'],
-			timestamp: new Date(d['Timestamp(UTC)']),
-			usAqi: +d['US AQI']
-		}))
-	);
+	function parseRow(d: any) {
+		return {
+	 		city: d.City,
+	 		country: d.Country,
+	 		mainPollutant: d['Main pollutant'],
+	 		pm25: +d['PM2.5'],
+	 		state: d.State,
+	 		stationName: d['Station name'],
+	 		timestamp: new Date(d['Timestamp(UTC)']),
+	 		usAqi: +d['US AQI']
+	 	};
+	}
+
+	let dataPromise: Promise<any[]> = d3.csv(datasets['avalon'], parseRow);
+
+	$: if ($selectedDataset) {
+	  // re-run fetch whenever selectedDataset changes
+	  dataPromise = d3.csv(datasets[$selectedDataset], parseRow);
+	}
 </script>
 
-{#await data}
-	<!-- promise is pending -->
+<h2>AQI Chart</h2>
+<label>
+  Dataset:
+	<select on:change={(e) => selectedDataset.set((e.target as HTMLSelectElement).value as keyof typeof datasets)}>
+		{#each Object.keys(datasets) as key}
+			<option value={key} selected={key === 'avalon'}>{key}</option>
+		{/each}
+	</select>
+</label>
+
+{#await dataPromise}
 	<p>loading data...</p>
 {:then data}
-	<!-- promise was fulfilled or not a Promise -->
-	<h2>AQI Chart</h2>
 	<AQIChart {data} />
 {:catch error}
-	<!-- promise was rejected -->
 	<p>Something went wrong: {error.message}</p>
 {/await}
 
