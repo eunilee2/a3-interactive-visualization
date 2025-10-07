@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AQIChart from '$lib/AQIChart.svelte';
 	import AQITimeSeries from '$lib/AQITimeSeries.svelte';
+	import AQICustomChart from '$lib/AQICustomChart.svelte';
 	import * as d3 from 'd3';
 	import { writable, derived} from 'svelte/store';
 
@@ -46,7 +47,8 @@
 	}
 </script>
 
-<h2>AQI Chart</h2>
+<h1>AQI Data Visualization</h1>
+<h2>Controls</h2>
 <label>
   Dataset:
 	<select on:change={(e) => selectedDataset.set((e.target as HTMLSelectElement).value as keyof typeof datasets)}>
@@ -64,8 +66,12 @@
 {#await dataPromise}
 	<p>loading data...</p>
 {:then data}
-	<AQIChart {data} />
+	<!-- <AQIChart {data} /> -->
+	 <h2>AQI Chart (Part 1)</h2>
 	<AQITimeSeries {data} {showRaw} />
+	<h2>AQI Custom Chart (Part 2)</h2>
+	<p>Want to look at the chart a little closer? Drag over an area you want to zoom in! <br/><br/> Double click to reset zoom.</p>
+	<AQICustomChart {data} {showRaw} />
 {:catch error}
 	<p>Something went wrong: {error.message}</p>
 {/await}
