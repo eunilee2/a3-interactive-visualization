@@ -48,8 +48,8 @@
 </script>
 
 <h1>AQI Data Visualization</h1>
-<a href="/part2">
-	<button type="button">Go to Part 2 Chart &rarr;</button>
+<a href="/">
+	<button type="button">Go to Part 1 Chart &larr;</button>
 </a>
 <h2>Controls</h2>
 <p>Select a dataset and toggle raw data view:</p>
@@ -70,9 +70,12 @@
 {#await dataPromise}
 	<p>loading data...</p>
 {:then data}
-	<!-- <AQIChart {data} /> -->
-	<h2>AQI Chart (Part 1)</h2>
-	<AQITimeSeries {data} {showRaw} />
+	<br>
+	<h2>AQI Custom Chart (Part 2)</h2>
+	<p>Want to look at the chart a little closer? Drag over an area you want to zoom in! Double click to reset zoom.</p>
+	<p>Select 'Show Raw Data' and hover over each data point to see more details.</p>
+	<p>Toggle each AQI level to view raw data points that fall within that level.</p>
+	<AQICustomChart {data} {showRaw} />
 {:catch error}
 	<p>Something went wrong: {error.message}</p>
 {/await}

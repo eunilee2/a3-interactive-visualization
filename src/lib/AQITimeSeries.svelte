@@ -11,6 +11,16 @@
 	let container: HTMLDivElement;
 	let ro: ResizeObserver | null = null;
 
+	// AQI levels to show as background bands and in the legend
+	const aqiLevels = [
+		{ name: 'Good', min: 0, max: 50, color: '#9cd84e' },
+		{ name: 'Moderate', min: 51, max: 100, color: '#facf39' },
+		{ name: 'Unhealthy for Sensitive Groups', min: 101, max: 150, color: '#f99049' },
+		{ name: 'Unhealthy', min: 151, max: 200, color: '#f65e5f' },
+		{ name: 'Very Unhealthy', min: 201, max: 300, color: '#a070b6' },
+		{ name: 'Hazardous', min: 301, color: '#a06a7b' }
+	];
+
 	function draw() {
 		if (!container) return;
 		// clear
@@ -84,16 +94,6 @@
 
 		// debug: show a sample of computed series values (check p10/p90)
 		// console.log('AQITimeSeries series sample:', series.slice(0, 10));
-
-		// AQI levels to show as background bands and in the legend
-		const aqiLevels = [
-			{ name: 'Good', min: 0, max: 50, color: '#9cd84e' },
-			{ name: 'Moderate', min: 51, max: 100, color: '#facf39' },
-			{ name: 'Unhealthy for Sensitive Groups', min: 101, max: 150, color: '#f99049' },
-			{ name: 'Unhealthy', min: 151, max: 200, color: '#f65e5f' },
-			{ name: 'Very Unhealthy', min: 201, max: 300, color: '#a070b6' },
-			{ name: 'Hazardous', min: 301, color: '#a06a7b' }
-		];
 
 	const x = d3.scaleTime().domain(d3.extent(series, d => d.date) as [Date, Date]).range([0, innerWidth]).nice();
 	const yMax = d3.max(series, d => d.p90 ?? d.avg) ?? 0;
@@ -244,12 +244,12 @@
 		const legend = svg.append('g').attr('transform', `translate(${width - margin.right + 10},${margin.top})`);
 		let legendY = 0;
 		// show only levels we rendered
-		visibleLevels.forEach((lvl: any) => {
-			const label = lvl.max ? `${lvl.name} (${lvl.min}–${lvl.max})` : `${lvl.name} (${lvl.min}+)`;
-			legend.append('rect').attr('x', 0).attr('y', legendY).attr('width', 12).attr('height', 12).attr('fill', lvl.color).attr('opacity', 0.9);
-			legend.append('text').attr('x', 18).attr('y', legendY + 10).text(label).attr('font-size', 12).attr('alignment-baseline', 'middle');
-			legendY += 18;
-		});
+		// visibleLevels.forEach((lvl: any) => {
+		// 	const label = lvl.max ? `${lvl.name} (${lvl.min}–${lvl.max})` : `${lvl.name} (${lvl.min}+)`;
+		// 	legend.append('rect').attr('x', 0).attr('y', legendY).attr('width', 12).attr('height', 12).attr('fill', lvl.color).attr('opacity', 0.9);
+		// 	legend.append('text').attr('x', 18).attr('y', legendY + 10).text(label).attr('font-size', 12).attr('alignment-baseline', 'middle');
+		// 	legendY += 18;
+		// });
 
 		// spacer
 		legendY += 6;
@@ -278,12 +278,58 @@ $: if (container) {
     draw();
 }
 </script>
+<!-- AQI Level Legend -->
+<div class="aqi-legend">
+	<div class="aqi-levels">
+		{#each aqiLevels as level}
+			<div class="aqi-level" style="background-color: {level.color}">
+				<span class="level-name">{level.name}</span>
+				<span class="level-range">
+					{level.min}-{level.max ?? '500+'}
+				</span>
+			</div>
+		{/each}
+	</div>
+</div>
 
+<!-- Chart -->
 <div bind:this={container} class="aqi-timeseries" style="width:100%; position:relative"></div>
 
 <style>
 	:global(.band) { fill: #aeaeae; opacity: 0.5; }
-	:global(.line) { stroke: rgb(0, 20, 36); fill: none; stroke-width: 1.5px; }
+	:global(.line) { stroke: #1f77b4; fill: none; stroke-width: 1.5px; }
 	/* keep global styles minimal to avoid "unused selector" warnings */
 	:global(svg) { font-family: sans-serif; }
+
+	.aqi-legend {
+        margin: 20px 0;
+    }
+    
+    .aqi-levels {
+        display: flex;
+        flex-direction: row;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+    
+    .aqi-level {
+        padding: 8px 12px;
+        border-radius: 4px;
+        color: black;
+        min-width: 100px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        font-size: 12px;
+    }
+    
+    .level-name {
+        font-weight: bold;
+        margin-bottom: 2px;
+    }
+    
+    .level-range {
+        font-size: 11px;
+        opacity: 0.9;
+    }
 </style>
