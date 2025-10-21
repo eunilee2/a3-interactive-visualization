@@ -260,10 +260,27 @@
                 .attr('cx', (d: any) => x(d.timestamp))
                 .attr('cy', (d: any) => y(d.value))
                 .attr('r', 3.5)
-                .attr('fill', '#222')
+                // .attr('fill', '#222')
+				.attr('fill', (d: any) => {
+					if (selectedLevel !== null) {
+						const level = aqiLevels.find(l => l.min === selectedLevel);
+						const max = level?.max ?? Infinity;
+						// Only highlight if level is found
+						if (level && d.value >= level.min && d.value <= max) {
+							return d3.rgb(level.color).darker(0.7).formatHex();
+						} else {
+							return '#bbb';
+						}
+					} else {
+						const level = aqiLevels.find(l => d.value >= l.min && (l.max === undefined || d.value <= l.max));
+						return level ? level.color : '#bbb';
+					}
+				})
                 .attr('opacity', 0.6)
                 .on('mouseover', function (event: any, d: any) {
-                    tooltip.style('display', 'block').text(`${d.timestamp.toISOString().slice(0, 16).replace('T',' ')} — ${d.value}`);
+                    tooltip
+					.style('display', 'block')
+					.html(`Timestamp: ${d.timestamp.toISOString().slice(0, 16).replace('T',' ')}<br>AQI: ${d.value}`);
                 })
                 .on('mousemove', function (event: any) {
                     const rect = container.getBoundingClientRect();

@@ -1,6 +1,4 @@
 <script lang="ts">
-	import AQIChart from '$lib/AQIChart.svelte';
-	import AQITimeSeries from '$lib/AQITimeSeries.svelte';
 	import AQICustomChart from '$lib/AQICustomChart.svelte';
 	import * as d3 from 'd3';
 	import { writable, derived} from 'svelte/store';
@@ -30,11 +28,10 @@
 	 		city: d.City,
 	 		country: d.Country,
 	 		mainPollutant: d['Main pollutant'],
-	 		pm25: +d['PM2.5'],
+			usAqi: +d['US AQI'],
 	 		state: d.State,
 	 		stationName: d['Station name'],
 	 		timestamp: new Date(d['Timestamp(UTC)']),
-	 		usAqi: +d['US AQI']
 	 	};
 	}
 
