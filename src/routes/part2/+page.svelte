@@ -51,6 +51,7 @@
 <a href="/">
 	<button type="button">Go to Part 1 Chart &larr;</button>
 </a>
+
 <h2>Controls</h2>
 <p>Select a dataset and toggle raw data view:</p>
 <label>
