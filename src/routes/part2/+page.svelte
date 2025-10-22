@@ -22,25 +22,34 @@
 	};
 
 	const selectedDataset = writable<keyof typeof datasets>('avalon');
+	const selectedSecondaryDataset = writable<keyof typeof datasets | null>(null);
 
 	function parseRow(d: any) {
 		return {
 	 		city: d.City,
 	 		country: d.Country,
 	 		mainPollutant: d['Main pollutant'],
-			usAqi: +d['US AQI'],
 	 		state: d.State,
 	 		stationName: d['Station name'],
 	 		timestamp: new Date(d['Timestamp(UTC)']),
+	 		usAqi: +d['US AQI']
 	 	};
 	}
 
 	let dataPromise: Promise<any[]> = d3.csv(datasets['avalon'], parseRow);
+	let secondaryDataPromise: Promise<any[]> | null = null;
 	let showRaw: boolean = false;
 
 	$: if ($selectedDataset) {
-	  // re-run fetch whenever selectedDataset changes
-	  dataPromise = d3.csv(datasets[$selectedDataset], parseRow);
+		// re-run fetch whenever selectedDataset changes
+		dataPromise = d3.csv(datasets[$selectedDataset], parseRow);
+	}
+
+	$: if ($selectedSecondaryDataset) {
+		// re-run fetch whenever selectedSecondaryDataset changes
+		secondaryDataPromise = d3.csv(datasets[$selectedSecondaryDataset], parseRow);
+	} else {
+		secondaryDataPromise = null;
 	}
 </script>
 
@@ -61,19 +70,39 @@
 </label>
 
 <label>
-    Show Raw Data
+    Show Raw Data (Primary)
     <input type="checkbox" bind:checked={showRaw} />
 </label>
 
-{#await dataPromise}
+<label>
+	Compare with:
+	<select on:change={(e) => {
+		const value = (e.target as HTMLSelectElement).value;
+		selectedSecondaryDataset.set(value === '' ? null : value as keyof typeof datasets);
+	}}>
+		<option value="">None</option>
+		{#each Object.keys(datasets) as key}
+			{#if key !== $selectedDataset}
+				<option value={key}>{key}</option>
+			{/if}
+		{/each}
+	</select>
+</label>
+
+{#await Promise.all([dataPromise, secondaryDataPromise || Promise.resolve(null)])}
 	<p>loading data...</p>
-{:then data}
+{:then [data, secondaryData]}
 	<br>
 	<h2>AQI Custom Chart (Part 2)</h2>
 	<p>Want to look at the chart a little closer? Drag over an area you want to zoom in! Double click to reset zoom.</p>
 	<p>Select 'Show Raw Data' and hover over each data point to see more details.</p>
 	<p>Toggle each AQI level to view raw data points that fall within that level.</p>
-	<AQICustomChart {data} {showRaw} />
+	<AQICustomChart 
+		{data} 
+		secondaryData={secondaryData || []} 
+		{showRaw}
+		showSecondary={!!secondaryData} 
+	/>
 {:catch error}
 	<p>Something went wrong: {error.message}</p>
 {/await}

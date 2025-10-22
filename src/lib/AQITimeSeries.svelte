@@ -95,7 +95,7 @@
 		// debug: show a sample of computed series values (check p10/p90)
 		// console.log('AQITimeSeries series sample:', series.slice(0, 10));
 
-	const x = d3.scaleTime().domain(d3.extent(series, d => d.date) as [Date, Date]).range([0, innerWidth]).nice();
+	const x = d3.scaleTime().domain(d3.extent(series, d => d.date) as [Date, Date]).range([0, innerWidth]);
 	const yMax = d3.max(series, d => d.p90 ?? d.avg) ?? 0;
 
 	// compute adaptive y-domain: prefer to cap near the data peak (p90) so the chart isn't dominated
@@ -124,8 +124,20 @@
 			}) as any);
 		const yAxis = d3.axisLeft(y).ticks(5);
 
-		g.append('g').attr('class', 'y axis').call(yAxis);
+        g.append('g').attr('class', 'y axis')
+			.call(yAxis)
+			// Y-axis label
+			.append('text')
+			.attr('class', 'axis-label')
+			.attr('transform', `rotate(-90)`)
+			.attr('y', -50)
+			.attr('x', -innerHeight / 2)
+			.attr('dy', '1em')
+			.attr('fill', '#222')
+			.attr('text-anchor', 'middle')
+			.text('AQI');
 
+		// .rotate labels
 		g.append('g')
 			.attr('class', 'x axis')
 			.attr('transform', `translate(0,${innerHeight})`)
@@ -133,6 +145,17 @@
 			.selectAll('text')
 			.attr('transform', 'rotate(-35)')
 			.style('text-anchor', 'end');
+
+		g.append('g')
+            .attr('class', 'x axis')
+            .attr('transform', `translate(0,${innerHeight})`)
+			.append('text')
+			.attr('class', 'axis-label')
+			.attr('x', innerWidth / 2)
+			.attr('y', 55)
+			.attr('fill', '#222')
+			.attr('text-anchor', 'middle')
+			.text('Date');
 
 
 		// AQI background bands (draw before plotting data) - only draw visible levels
@@ -169,29 +192,36 @@
 		});
 
 		// area band
-		const area = d3.area()
-			.x((d: any) => x(d.date))
-			.y0((d: any) => y(d.p10))
-			.y1((d: any) => y(d.p90))
-			.curve(d3.curveMonotoneX as any);
+		// const area = d3.area()
+		// 	.x((d: any) => x(d.date))
+		// 	.y0((d: any) => y(d.p10))
+		// 	.y1((d: any) => y(d.p90))
+		// 	.curve(d3.curveMonotoneX as any);
 
 		g.append('path')
 			.datum(series)
 			.attr('class', 'band')
-			.attr('d', area as any)
+			.attr('d', d3.area()
+				.x((d: any) => x(d.date))
+				.y0((d: any) => y(d.p10))
+				.y1((d: any) => y(d.p90))
+				.curve(d3.curveMonotoneX as any) as any)
 			.attr('fill', '#aeaeae')
 			.attr('opacity', 0.5);
 
 		// avg line
-		const line = d3.line()
-			.x((d: any) => x(d.date))
-			.y((d: any) => y(d.avg))
-			.curve(d3.curveMonotoneX as any);
+		// const line = d3.line()
+		// 	.x((d: any) => x(d.date))
+		// 	.y((d: any) => y(d.avg))
+		// 	.curve(d3.curveMonotoneX as any);
 
 		g.append('path')
 			.datum(series)
 			.attr('class', 'line')
-			.attr('d', line as any)
+			.attr('d', d3.line()
+				.x((d: any) => x(d.date))
+				.y((d: any) => y(d.avg))
+				.curve(d3.curveMonotoneX as any) as any)
 			.attr('fill', 'none')
 			.attr('stroke', '#1f77b4')
 			.attr('stroke-width', 2);

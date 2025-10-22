@@ -47,38 +47,41 @@
 	}
 </script>
 
-<h1>AQI Data Visualization</h1>
-<a href="/part2">
-	<button type="button">Go to Part 2 Chart &rarr;</button>
-</a>
-<h2>Controls</h2>
-<p>Select a dataset and toggle raw data view:</p>
-<label>
-  Dataset:
-	<select on:change={(e) => selectedDataset.set((e.target as HTMLSelectElement).value as keyof typeof datasets)}>
-		{#each Object.keys(datasets) as key}
-			<option value={key} selected={key === 'avalon'}>{key}</option>
-		{/each}
-	</select>
-</label>
+<div class="page-container">
+	<h1>AQI Data Visualization</h1>
+	<a href="/part2">
+		<button type="button">Go to Part 2 Chart &rarr;</button>
+	</a>
+	<h2>Controls</h2>
+	<p>Select a dataset and toggle raw data view:</p>
+	<label>
+	Dataset:
+		<select on:change={(e) => selectedDataset.set((e.target as HTMLSelectElement).value as keyof typeof datasets)}>
+			{#each Object.keys(datasets) as key}
+				<option value={key} selected={key === 'avalon'}>{key}</option>
+			{/each}
+		</select>
+	</label>
 
-<label>
-    Show Raw Data
-    <input type="checkbox" bind:checked={showRaw} />
-</label>
+	<label>
+		Show Raw Data
+		<input type="checkbox" bind:checked={showRaw} />
+	</label>
 
-{#await dataPromise}
-	<p>loading data...</p>
-{:then data}
-	<!-- <AQIChart {data} /> -->
-	<h2>AQI Chart (Part 1)</h2>
-	<AQITimeSeries {data} {showRaw} />
-{:catch error}
-	<p>Something went wrong: {error.message}</p>
-{/await}
+	{#await dataPromise}
+		<p>loading data...</p>
+	{:then data}
+		<!-- <AQIChart {data} /> -->
+		<p>Showing <strong>{data.length}</strong> records</p>
+		<h2>AQI Chart (Part 1)</h2>
+		<AQITimeSeries {data} {showRaw} />
+	{:catch error}
+		<p>Something went wrong: {error.message}</p>
+	{/await}
+</div>
 
 <style>
-    * {
+    .page-container {
         font-family: sans-serif;
         display: flex;
         flex-direction: column;

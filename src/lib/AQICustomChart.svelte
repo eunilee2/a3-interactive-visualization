@@ -3,7 +3,44 @@
     import * as d3 from 'd3';
 
     export let data: any[] = [];
+    export let secondaryData: any[] = [];
     export let showRaw: boolean = false;
+    export let showSecondary: boolean = true;
+
+    function formatStationName(name: string | undefined, city?: string, state?: string, country?: string): string {
+        if (name) {
+            // Special case for USA
+            return name
+                .split('_')
+                .map(word => {
+                    if (word.toLowerCase() === 'usa') return 'USA';
+                    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+                })
+                .join(' ');
+        }
+        
+        // If no name but we have location data, construct a name
+        if (city || state || country) {
+            const parts = [];
+            if (city) parts.push(city.charAt(0).toUpperCase() + city.slice(1).toLowerCase());
+            if (state) parts.push(state.charAt(0).toUpperCase() + state.slice(1).toLowerCase());
+            if (country) {
+                parts.push(country.toLowerCase() === 'usa' ? 'USA' : 
+                          country.charAt(0).toUpperCase() + country.slice(1).toLowerCase());
+            }
+            return parts.join(', ');
+        }
+        
+        return "Unknown Station";
+        // Special case for USA
+        // return name
+        //     .split('_')
+        //     .map(word => {
+        //         if (word.toLowerCase() === 'usa') return 'USA';
+        //         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        //     })
+        //     .join(' ');
+    }
 
     let container: HTMLDivElement;
     let ro: ResizeObserver | null = null;
@@ -115,7 +152,7 @@
             const n1 = c1 > fullXExtent[1] ? fullXExtent[1] : c1;
             currentXDomain = [n0, n1];
         }
-        const x = d3.scaleTime().domain(currentXDomain ?? fullXExtent).range([0, innerWidth]).nice();
+        const x = d3.scaleTime().domain(currentXDomain ?? fullXExtent).range([0, innerWidth]);
         const yMax = d3.max(filteredSeries, d => d.p90 ?? d.avg) ?? 0;
 
         const dataPeak = yMax;
@@ -137,15 +174,38 @@
             }) as any);
         const yAxis = d3.axisLeft(y).ticks(5);
 
-        g.append('g').attr('class', 'y axis').call(yAxis);
+        g.append('g').attr('class', 'y axis')
+		.call(yAxis)
+		// Y-axis label
+		.append('text')
+		.attr('class', 'axis-label')
+		.attr('transform', `rotate(-90)`)
+		.attr('y', -50)
+		.attr('x', -innerHeight / 2)
+		.attr('dy', '1em')
+		.attr('fill', '#222')
+		.attr('text-anchor', 'middle')
+		.text('AQI');
 
-        g.append('g')
+		// .rotate labels
+		g.append('g')
+			.attr('class', 'x axis')
+			.attr('transform', `translate(0,${innerHeight})`)
+			.call(xAxis)
+			.selectAll('text')
+			.attr('transform', 'rotate(-35)')
+			.style('text-anchor', 'end');
+
+		g.append('g')
             .attr('class', 'x axis')
             .attr('transform', `translate(0,${innerHeight})`)
-            .call(xAxis)
-            .selectAll('text')
-            .attr('transform', 'rotate(-35)')
-            .style('text-anchor', 'end');
+			.append('text')
+			.attr('class', 'axis-label')
+			.attr('x', innerWidth / 2)
+			.attr('y', 55)
+			.attr('fill', '#222')
+			.attr('text-anchor', 'middle')
+			.text('Date');
 
         let brush: any;
         let brushG: any;
@@ -211,32 +271,236 @@
             .curve(d3.curveMonotoneX as any);
 
         g.append('path')
-            .datum(filteredSeries)
+            .datum(series)
             .attr('class', 'band')
             .attr('d', area as any)
             .attr('fill', '#aeaeae')
             .attr('opacity', 0.5)
             .attr('clip-path', `url(#${clipId})`);
 
-        // avg line
+        // avg line for primary data
         const line = d3.line()
             .x((d: any) => x(d.date))
             .y((d: any) => y(d.avg))
             .curve(d3.curveMonotoneX as any);
 
         g.append('path')
-            // .datum(filteredSeries)
-			.datum(series)
-            .attr('class', 'line')
+            .datum(series)
+            .attr('class', 'line primary')
             .attr('d', line as any)
             .attr('fill', 'none')
             .attr('stroke', '#1f77b4')
             .attr('stroke-width', 2)
             .attr('clip-path', `url(#${clipId})`);
 
-        brush = (d3.brushX() as any).extent([[0, 0], [innerWidth, innerHeight]]).on('end', brushed as any);
-        brushG = g.append('g').attr('class', 'x-brush').style('cursor', 'crosshair').call(brush as any);
+            // Create legend group
+		const legendGroup = g.append('g')
+            .attr('class', 'legend')
+            .attr('transform', `translate(${innerWidth + 10}, 0)`);
 
+        // Legend sections title
+        const stationsTitle = legendGroup.append('text')
+            .attr('x', 0)
+            .attr('y', -10)
+            .attr('fill', '#222')
+            .style('font-size', '12px')
+            .style('font-weight', 'bold')
+            .text('Data Type');
+
+        // Add visualization type legend (area band and line average)
+        const visualTypeGroup = legendGroup.append('g')
+            .attr('transform', 'translate(0, 15)');
+
+        // Area band legend
+        visualTypeGroup.append('rect')
+            .attr('x', 0)
+            .attr('y', -8)
+            .attr('width', 20)
+            .attr('height', 16)
+            .attr('fill', '#aeaeae')
+            .attr('opacity', 0.5);
+
+        visualTypeGroup.append('text')
+            .attr('x', 25)
+            .attr('y', 0)
+            .attr('fill', '#222')
+            .style('font-size', '12px')
+            .text('10%-90% band');
+
+        // Line average legend
+        const lineAvgGroup = legendGroup.append('g')
+            .attr('transform', 'translate(0, 40)');
+
+        lineAvgGroup.append('line')
+            .attr('x1', 0)
+            .attr('y1', 0)
+            .attr('x2', 20)
+            .attr('y2', 0)
+            .attr('stroke', '#1f77b4')
+            .attr('stroke-width', 2);
+
+        lineAvgGroup.append('text')
+            .attr('x', 25)
+            .attr('y', 4)
+            .attr('fill', '#222')
+            .style('font-size', '12px')
+            .text('Monthly average');
+
+        // Stations section title
+        legendGroup.append('text')
+            .attr('x', 0)
+            .attr('y', 70)
+            .attr('fill', '#222')
+            .style('font-size', '12px')
+            .style('font-weight', 'bold')
+            .text('Stations');
+
+        // Add primary station to legend
+        const primaryLegend = legendGroup.append('g')
+            .attr('transform', 'translate(0, 95)');
+
+        // Primary station area band
+        primaryLegend.append('rect')
+            .attr('x', 0)
+            .attr('y', -8)
+            .attr('width', 20)
+            .attr('height', 16)
+            .attr('fill', '#aeaeae')
+            .attr('opacity', 0.5);
+
+        // Primary station line
+        primaryLegend.append('line')
+            .attr('x1', 0)
+            .attr('y1', 0)
+            .attr('x2', 20)
+            .attr('y2', 0)
+            .attr('stroke', '#1f77b4')
+            .attr('stroke-width', 2.5);
+
+        // Primary station name
+        primaryLegend.append('text')
+            .attr('x', 25)
+            .attr('y', 4)
+            .attr('fill', '#222')
+            .style('font-size', '12px')
+            .text(formatStationName(
+                data[0]?.stationName,
+                data[0]?.city,
+                data[0]?.state,
+                data[0]?.country
+            ));
+
+
+
+        // Draw secondary data if available
+        if (showSecondary && secondaryData && secondaryData.length > 0) {
+            // Add secondary station to legend
+            const secondaryLegend = legendGroup.append('g')
+                .attr('transform', 'translate(0, 125)');
+
+            // Secondary area band in legend
+            secondaryLegend.append('rect')
+                .attr('x', 0)
+                .attr('y', -8)
+                .attr('width', 20)
+                .attr('height', 16)
+                .attr('fill', '#d4a680')
+                .attr('opacity', 0.2);
+
+            // Secondary line in legend
+            secondaryLegend.append('line')
+                .attr('x1', 0)
+                .attr('y1', 0)
+                .attr('x2', 20)
+                .attr('y2', 0)
+                .attr('stroke', '#8b4513')
+                .attr('stroke-width', 1);
+
+            // Secondary station name
+            secondaryLegend.append('text')
+                .attr('x', 25)
+                .attr('y', 4)
+                .attr('fill', '#222')
+                .style('font-size', '12px')
+                .text(formatStationName(
+                    secondaryData[0]?.stationName,
+                    secondaryData[0]?.city,
+                    secondaryData[0]?.state,
+                    secondaryData[0]?.country
+                ));
+
+            // Process secondary data
+            let secondarySeries: any[] = [];
+            if (secondaryData[0].timestamp || secondaryData[0].usAqi) {
+                const secondaryRawRows = secondaryData
+                    .map((d: any) => ({
+                        timestamp: d.timestamp ? new Date(d.timestamp) : null,
+                        value: d.usAqi != null ? +d.usAqi : (d['US AQI'] != null ? +d['US AQI'] : (d.pm25 != null ? +d.pm25 : NaN))
+                    }))
+                    .filter((r: any) => r.timestamp && !isNaN(r.value));
+
+                const groupedSecondary = d3.group(secondaryRawRows, (r: any) => alignTo15(r.timestamp).getTime());
+
+                secondarySeries = Array.from(groupedSecondary, ([k, vals]) => {
+                    const values = vals.map((v: any) => v.value).sort(d3.ascending);
+                    const count = values.length;
+                    return {
+                        date: new Date(Number(k)),
+                        count,
+                        avg: count ? d3.mean(values) : NaN,
+                        p10: count ? d3.quantileSorted(values, 0.1) : NaN,
+                        p90: count ? d3.quantileSorted(values, 0.9) : NaN
+                    };
+                }).sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
+            } else {
+                secondarySeries = secondaryData.map((d: any) => ({
+                    date: new Date(parseDate(d)),
+                    avg: d.avg ?? d.usAqi ?? d.pm25,
+                    p10: d.p10 ?? d.avg ?? d.usAqi ?? d.pm25,
+                    p90: d.p90 ?? d.avg ?? d.usAqi ?? d.pm25,
+                    count: d.count ?? 0
+                })).filter((d: any) => d.date && !isNaN(d.avg));
+            }
+
+            // Draw secondary area band
+            const secondaryArea = d3.area<any>()
+                .x(d => x(d.date))
+                .y0(d => y(d.p10))
+                .y1(d => y(d.p90))
+                .curve(d3.curveMonotoneX);
+
+            g.append('path')
+                .datum(secondarySeries)
+                .attr('class', 'band secondary')
+                .attr('d', secondaryArea)
+                .attr('fill', '#d4a680')  // light brown for area band
+                .attr('opacity', 0.2)      // lighter opacity
+                .attr('clip-path', `url(#${clipId})`);
+
+            // Draw secondary avg line
+            const secondaryLine = d3.line()
+                .x((d: any) => x(d.date))
+                .y((d: any) => y(d.avg))
+                .curve(d3.curveMonotoneX as any);
+
+            g.append('path')
+                .datum(secondarySeries)
+                .attr('class', 'line secondary')
+                .attr('d', secondaryLine as any)
+                .attr('fill', 'none')
+                .attr('stroke', '#8b4513')  // darker brown for the line
+                .attr('stroke-width', 1)
+                .attr('clip-path', `url(#${clipId})`);
+        }
+
+        // Add brush for zooming
+        brush = (d3.brushX() as any).extent([[0, 0], [innerWidth, innerHeight]]).on('end', brushed as any);
+        brushG = g.append('g')
+            .attr('class', 'x-brush')
+            .style('cursor', 'crosshair')
+            .call(brush as any);
+
+        // Draw raw points if enabled
         if (showRaw && filteredRawRows && filteredRawRows.length > 0) {
             let tooltip: any = (d3.select(container).select('.raw-tooltip') as any);
             if (!tooltip || tooltip.empty()) {
@@ -265,15 +529,13 @@
 					if (selectedLevel !== null) {
 						const level = aqiLevels.find(l => l.min === selectedLevel);
 						const max = level?.max ?? Infinity;
-						// Only highlight if level is found
 						if (level && d.value >= level.min && d.value <= max) {
 							return d3.rgb(level.color).darker(0.7).formatHex();
 						} else {
-							return '#bbb';
+							return '#444'; // gray for out-of-range
 						}
 					} else {
-						const level = aqiLevels.find(l => d.value >= l.min && (l.max === undefined || d.value <= l.max));
-						return level ? level.color : '#bbb';
+						return '#444'; // gray when no level is selected
 					}
 				})
                 .attr('opacity', 0.6)
@@ -304,9 +566,9 @@
         if (ro && container) ro.disconnect();
     });
 
-    // re-draw when inputs change (data, showRaw, selectedLevel)
+    // re-draw when inputs change
     $: if (container) {
-        data, showRaw, selectedLevel;
+        data, showRaw, selectedLevel, showSecondary, secondaryData;
         draw();
     }
 </script>
@@ -334,8 +596,8 @@
 <div bind:this={container} class="aqi-timeseries" style="width:100%; position:relative"></div>
 
 <style>
-    :global(.band) { fill: #aeaeae; opacity: 0.5; }
-    :global(.line) { stroke: #1f77b4; fill: none; stroke-width: 1.5px; }
+    /* :global(.band) { fill: #aeaeae; opacity: 0.5; } */
+    /* :global(.line) { stroke: #1f77b4; fill: none; stroke-width: 1.5px; } */
     :global(svg) { font-family: sans-serif; }
     .aqi-legend {
         margin: 20px 0;
