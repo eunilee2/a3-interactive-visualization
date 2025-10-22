@@ -58,6 +58,10 @@
 	<button type="button">Go to Part 1 Chart &larr;</button>
 </a>
 
+<a href="/report">
+	<button type="button">Go to the Report Writeup &rarr;</button>
+</a>
+
 <h2>Controls</h2>
 <div class="controls-container">
     <div class="primary-controls">
@@ -102,6 +106,7 @@
 	<p>Want to look at the chart a little closer? Drag over an area you want to zoom in! Double click to reset zoom.</p>
 	<p>Select 'Show Raw Data' and hover over each data point to see more details.</p>
 	<p>Toggle each AQI level to view raw data points that fall within that level.</p>
+	<p>A secondary dataset can be compared against the primary dataset. See the legend for encoding details.</p>
 	<AQICustomChart 
 		{data} 
 		secondaryData={secondaryData || []} 

@@ -87,4 +87,17 @@
         flex-direction: column;
         align-items: flex-start;
     }
+	button {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        background-color: white;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    button:hover {
+        background-color: #f0f0f0;
+    }
 </style>
