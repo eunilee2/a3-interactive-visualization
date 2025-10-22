@@ -62,7 +62,7 @@
         if (!container) return;
         d3.select(container).selectAll('*').remove();
 
-        const margin = { top: 20, right: 120, bottom: 60, left: 60 };
+        const margin = { top: 20, right: 150, bottom: 60, left: 60 }; // Increased right margin for legend
         const width = Math.max(600, container.clientWidth || 800);
         const height = 420;
 
@@ -279,7 +279,7 @@
             .attr('clip-path', `url(#${clipId})`);
 
         // avg line for primary data
-        const line = d3.line()
+        const primaryLineGenerator = d3.line()
             .x((d: any) => x(d.date))
             .y((d: any) => y(d.avg))
             .curve(d3.curveMonotoneX as any);
@@ -287,7 +287,7 @@
         g.append('path')
             .datum(series)
             .attr('class', 'line primary')
-            .attr('d', line as any)
+            .attr('d', primaryLineGenerator as any)
             .attr('fill', 'none')
             .attr('stroke', '#1f77b4')
             .attr('stroke-width', 2)
@@ -377,18 +377,39 @@
             .attr('stroke', '#1f77b4')
             .attr('stroke-width', 2.5);
 
-        // Primary station name
-        primaryLegend.append('text')
-            .attr('x', 25)
-            .attr('y', 4)
-            .attr('fill', '#222')
-            .style('font-size', '12px')
-            .text(formatStationName(
-                data[0]?.stationName,
-                data[0]?.city,
-                data[0]?.state,
-                data[0]?.country
-            ));
+        // Primary station name with text wrapping
+        const primaryStationName = formatStationName(
+            data[0]?.stationName,
+            data[0]?.city,
+            data[0]?.state,
+            data[0]?.country
+        );
+        
+        const maxWidth = Math.min(100, margin.right - 35); // 35 is space for the legend symbol + padding
+        const primaryWords = primaryStationName.split(/\s+/);
+        let primaryCurrentLine = '';
+        let primaryLines = [];
+        
+        primaryWords.forEach(word => {
+            const testLine = primaryCurrentLine ? primaryCurrentLine + ' ' + word : word;
+            const testWidth = 6 * testLine.length; // Approximate width based on font size
+            if (testWidth > maxWidth && primaryCurrentLine) {
+                primaryLines.push(primaryCurrentLine);
+                primaryCurrentLine = word;
+            } else {
+                primaryCurrentLine = testLine;
+            }
+        });
+        if (primaryCurrentLine) primaryLines.push(primaryCurrentLine);
+        
+        primaryLines.forEach((textLine, i) => {
+            primaryLegend.append('text')
+                .attr('x', 25)
+                .attr('y', 4 + (i * 14)) // 14px line height
+                .attr('fill', '#222')
+                .style('font-size', '12px')
+                .text(textLine);
+        });
 
 
 
@@ -416,18 +437,38 @@
                 .attr('stroke', '#8b4513')
                 .attr('stroke-width', 1);
 
-            // Secondary station name
-            secondaryLegend.append('text')
-                .attr('x', 25)
-                .attr('y', 4)
-                .attr('fill', '#222')
-                .style('font-size', '12px')
-                .text(formatStationName(
-                    secondaryData[0]?.stationName,
-                    secondaryData[0]?.city,
-                    secondaryData[0]?.state,
-                    secondaryData[0]?.country
-                ));
+            // Secondary station name with text wrapping
+            const secondaryStationName = formatStationName(
+                secondaryData[0]?.stationName,
+                secondaryData[0]?.city,
+                secondaryData[0]?.state,
+                secondaryData[0]?.country
+            );
+            
+            const secondaryWords = secondaryStationName.split(/\s+/);
+            let currentLine = '';
+            let secondaryLines = [];
+            
+            secondaryWords.forEach(word => {
+                const testLine = currentLine ? currentLine + ' ' + word : word;
+                const testWidth = 6 * testLine.length; // Approximate width based on font size
+                if (testWidth > maxWidth && currentLine) {
+                    secondaryLines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            });
+            if (currentLine) secondaryLines.push(currentLine);
+            
+            secondaryLines.forEach((textLine, i) => {
+                secondaryLegend.append('text')
+                    .attr('x', 25)
+                    .attr('y', 4 + (i * 14)) // 14px line height
+                    .text(textLine)
+                    .attr('fill', '#222')
+                    .style('font-size', '12px');
+            });
 
             // Process secondary data
             let secondarySeries: any[] = [];

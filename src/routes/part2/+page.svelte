@@ -59,35 +59,40 @@
 </a>
 
 <h2>Controls</h2>
-<p>Select a dataset and toggle raw data view:</p>
-<label>
-  Dataset:
-	<select on:change={(e) => selectedDataset.set((e.target as HTMLSelectElement).value as keyof typeof datasets)}>
-		{#each Object.keys(datasets) as key}
-			<option value={key} selected={key === 'avalon'}>{key}</option>
-		{/each}
-	</select>
-</label>
+<div class="controls-container">
+    <div class="primary-controls">
+        <label class="control-label">
+            Primary Dataset:
+            <select on:change={(e) => selectedDataset.set((e.target as HTMLSelectElement).value as keyof typeof datasets)}>
+                {#each Object.keys(datasets) as key}
+                    <option value={key} selected={key === 'avalon'}>{key}</option>
+                {/each}
+            </select>
+        </label>
 
-<label>
-    Show Raw Data (Primary)
-    <input type="checkbox" bind:checked={showRaw} />
-</label>
+        <label class="control-label raw-data">
+            Show Raw Data (Primary)
+            <input type="checkbox" bind:checked={showRaw} />
+        </label>
+    </div>
 
-<label>
-	Compare with:
-	<select on:change={(e) => {
-		const value = (e.target as HTMLSelectElement).value;
-		selectedSecondaryDataset.set(value === '' ? null : value as keyof typeof datasets);
-	}}>
-		<option value="">None</option>
-		{#each Object.keys(datasets) as key}
-			{#if key !== $selectedDataset}
-				<option value={key}>{key}</option>
-			{/if}
-		{/each}
-	</select>
-</label>
+    <div class="secondary-controls">
+        <label class="control-label">
+            Compare with:
+            <select on:change={(e) => {
+                const value = (e.target as HTMLSelectElement).value;
+                selectedSecondaryDataset.set(value === '' ? null : value as keyof typeof datasets);
+            }}>
+                <option value="">None</option>
+                {#each Object.keys(datasets) as key}
+                    {#if key !== $selectedDataset}
+                        <option value={key}>{key}</option>
+                    {/if}
+                {/each}
+            </select>
+        </label>
+    </div>
+</div>
 
 {#await Promise.all([dataPromise, secondaryDataPromise || Promise.resolve(null)])}
 	<p>loading data...</p>
@@ -108,10 +113,74 @@
 {/await}
 
 <style>
-    * {
+    :global(*) {
         font-family: sans-serif;
+    }
+
+    h1, h2, p {
+        margin-bottom: 1rem;
+    }
+
+    .controls-container {
+        display: grid;
+        grid-template-columns: minmax(30vw, 1fr) minmax(30vw, 1fr);
+        gap: 2rem;
+        width: 100%;
+        max-width: 800px;
+        margin-bottom: 2rem;
+    }
+
+    .primary-controls,
+    .secondary-controls {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        gap: 1rem;
+        width: 100%;
+        padding: 1rem;
+        background: #f8f8f8;
+        border-radius: 8px;
+        min-height: 120px; /* Ensure minimum height for visual balance */
+    }
+
+    .control-label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-weight: bold;
+        width: 100%;
+    }
+
+    .raw-data {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    select {
+        padding: 0.5rem;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        font-size: 1rem;
+        width: 100%;
+        min-width: 200px;
+    }
+
+    input[type="checkbox"] {
+        width: 1.2rem;
+        height: 1.2rem;
+    }
+
+    button {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        background-color: white;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    button:hover {
+        background-color: #f0f0f0;
     }
 </style>
